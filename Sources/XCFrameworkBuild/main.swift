@@ -7,7 +7,7 @@ command(
     Option("configurations", default: "", description: "编译的配置 如果不设置则存在 Release就设置为Release 否则就需要选择"),
     Options<String>("destination", default: ["iOS"], count: 4, description: "编译类型 默认为iOS 支持类型[iOS macOS tvOS watchOS]"),
     Option("productName", default: "", description: "Framework 产品的名称默认[scheme]")
-) { project, exportPath, scheme, configurations, destination in
+) { project, exportPath, scheme, configurations, destination, productName in
     var build = XCFrameworkBuild(project:project, exportPath:exportPath, scheme:scheme, configurations:configurations, destination:destination)
     build.productName = productName
     do {
