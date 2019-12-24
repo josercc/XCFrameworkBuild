@@ -15,7 +15,15 @@ struct XCFrameworkBuild {
     let scheme:String
     let configurations:String
     let destination:[String]
-    
+    var productName:String = "" {
+        get {
+            if self.productName.count > 0 {
+                return self.productName
+            } else {
+                return self.scheme
+            }
+        }
+    }
     var frameworkPaths:[String] = []
     
     mutating func build() throws {
@@ -54,7 +62,7 @@ struct XCFrameworkBuild {
             createXCFrameworks.append(item)
         }
         createXCFrameworks.append("-output")
-        createXCFrameworks.append("\(self.exportPath)/\(scheme).xcframework")
+        createXCFrameworks.append("\(self.exportPath)/\(self.productName).xcframework")
         // xcodebuild -create-xcframework -framework /tmp/xcf/ios.xcarchive/Products/Library/Frameworks/TestFramework.framework -framework /tmp/xcf/iossimulator.xcarchive/Products/Library/Frameworks/TestFramework.framework -output /tmp/xcf/TestFramework.xcframework
         try runAndPrint("xcodebuild", createXCFrameworks)
     }
@@ -73,7 +81,7 @@ struct XCFrameworkBuild {
         let archivePath = "\(self.exportPath)/\(sdk).xcarchive"
         //         // xcodebuild archive -scheme TestFramework -destination="iOS" -archivePath /tmp/xcf/ios.xcarchive -derivedDataPath /tmp/iphoneos -sdk iphoneos SKIP_INSTALL=NO BUILD_LIBRARIES_FOR_DISTRIBUTION=YES
         try runAndPrint("xcodebuild", "-project", project, "archive", "-scheme", scheme, "-configuration", configurations, "-destination=\"\(destination)\"", "-archivePath", archivePath, "-sdk", sdk, "SKIP_INSTALL=NO", "BUILD_LIBRARIES_FOR_DISTRIBUTION=YES", "-verbose")
-        let frameworkPath = "\(archivePath)/Products/Library/Frameworks/\(scheme).framework"
+        let frameworkPath = "\(archivePath)/Products/Library/Frameworks/\(self.productName).framework"
         self.frameworkPaths.append(frameworkPath)
         if !destination.contains("macOS") && !destination.contains("Simulator") {
             try xcodeBuild(scheme: scheme, destination: "\(destination) Simulator", configurations: configurations)
