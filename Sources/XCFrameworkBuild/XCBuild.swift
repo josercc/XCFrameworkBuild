@@ -40,8 +40,13 @@ class XCBuild {
         var commands:[String] = []
         let buildDir = try self.buildDir()
         for archs in archPlaforms {
-            let command = try spliteArchLib(archs, frameworkExec, frameworkDir, buildDir)
-            commands.append(contentsOf: ["-framework", command])
+            let arcName = archs.joined(separator: "-")
+            let command = try spliteArchLib(archs, frameworkName, frameworkDir, buildDir)
+            let toFrameworkPath = "\(buildDir)/\(arcName)/\(frameworkName).framework"
+            try FileManager.default.copyItem(atPath: frameworkDir, toPath: toFrameworkPath)
+            try FileManager.default.removeItem(atPath: "\(toFrameworkPath)/\(frameworkName)")
+            try FileManager.default.copyItem(atPath: command, toPath: "\(toFrameworkPath)/\(frameworkName)")
+            commands.append(contentsOf: ["-framework", toFrameworkPath])
         }
         try xcCommand(commands, frameworkName)
     }
@@ -58,7 +63,7 @@ class XCBuild {
         var commands:[String] = []
         let buildDir = try self.buildDir()
         for archs in archPlaforms {
-            let command = try spliteArchLib(archs, libExec, rootPath(libPath), buildDir)
+            let command = try spliteArchLib(archs, "lib\(libName).a", rootPath(libPath), buildDir)
             commands.append(contentsOf: ["-library", command, "-headers", headerDir])
         }
         try xcCommand(commands, libName)
@@ -127,7 +132,7 @@ class XCBuild {
     /// 编译所在的文件夹
     func buildDir() throws -> String {
         let user = try userName()
-        return "/Users/\(user)/Library/Caches"
+        return "/Users/\(user)/Library/Caches/xcbuild"
     }
     
     /// 获取当前用户名
