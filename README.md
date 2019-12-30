@@ -2,47 +2,39 @@
 
 ![image-20191213200218097](http://ipicimage-1251019290.coscd.myqcloud.com/2019-12-13-120221.png)
 
-一个快速帮你构建出`XCFramework`的脚本程序。
+A script program that helps you build `XCFramework` quickly, and supports conversion of` .framework` and `.a` before` .xcframework`.
 
-## 安装
+## Install
 
-### 安装Mint
+### Install Mint（If not already installed）
 
 ```shell
 brew install mint
 ```
 
-### 安装XCFrameworkBuild
+### Install XCFrameworkBuild
 
 ```shell
-mint install josercc/XCFrameworkBuild xcbuild
+mint install josercc/XCFrameworkBuild@master xcbuild -f
 ```
 
 ## Example
 
+### If you want to build XCFramework from source
+
 ```shell
-xcbuild /Users/zhangxing/Downloads/MyFramework/MyFramework.xcodeproj /Users/zhangxing/Downloads/Output
+xcbuild create [--platform=[iOS]]
 ```
 
-## 帮助信息
+### If you want to talk about .framework or .a to .xcframework
+
+```
+xcbuild transfer
+```
+
+## More commands
 
 ```
 xcbuild --help
-```
-
-```shell
-Usage:
-
-    $ xcbuild <project> <exportPath>
-
-Arguments:
-
-    project - Project文件的路径
-    exportPath - 编译完毕打包出来的目录
-
-Options:
-    --scheme [default: ] - 对应的scheme 默认为空 则自动获取 如果存在多个则需要选择
-    --configurations [default: ] - 编译的配置 如果不设置则存在 Release就设置为Release 否则就需要选择
-    --destination [default: ["iOS"]] - 编译类型 默认为iOS 支持类型[iOS macOS tvOS watchOS]
 ```
 

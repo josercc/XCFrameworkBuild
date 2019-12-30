@@ -52,7 +52,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "transfer"
+            argument = "create"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

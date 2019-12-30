@@ -19,7 +19,6 @@ struct BuildSetting {
             guard content.offset > 0 else {
                 continue
             }
-//            print(content.element)
             let configurations = content.element.components(separatedBy: " = ")
             self.settings[configurations[0]] = configurations[1]
         }

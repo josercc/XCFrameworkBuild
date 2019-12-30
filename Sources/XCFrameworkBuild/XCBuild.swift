@@ -18,80 +18,6 @@ class XCBuild {
         try FileManager.default.createDirectory(atPath: buildDir, withIntermediateDirectories: true, attributes: nil)
     }
     
-    func transfer() throws {
-        let chooseType = choose("Please select the type of conversion", choices: "framework", "library")
-        if chooseType == "framework" {
-            try transferFramework()
-        } else if chooseType == "library" {
-            try transferLibrary()
-        } else {
-            throw XCError.error("\(chooseType) type is not currently supported")
-        }
-    }
-    
-    func transferFramework() throws {
-        let frameworkDir = ask("Please enter the path where the .framework is located")
-        guard let frameworkName = libraryName(frameworkDir, ".framework") else {
-            throw XCError.error("Cannot find framework name")
-        }
-        /// 二进制的路径
-        let frameworkExec = "\(frameworkDir)/\(frameworkName)"
-        let archPlaforms = parseLibraryArchs(frameworkExec)
-        var commands:[String] = []
-        let buildDir = try self.buildDir()
-        for archs in archPlaforms {
-            let arcName = archs.joined(separator: "-")
-            let command = try spliteArchLib(archs, frameworkName, frameworkDir, buildDir)
-            let toFrameworkPath = "\(buildDir)/\(arcName)/\(frameworkName).framework"
-            try FileManager.default.copyItem(atPath: frameworkDir, toPath: toFrameworkPath)
-            let realPath = try FileManager.default.destinationOfSymbolicLink(atPath: "\(toFrameworkPath)/\(frameworkName)")
-            let fromURL = URL(fileURLWithPath: "\(toFrameworkPath)/\(realPath)")
-            let toURL = URL(fileURLWithPath: command)
-            let _ = try FileManager.default.replaceItemAt(fromURL, withItemAt: toURL)
-            commands.append(contentsOf: ["-framework", toFrameworkPath])
-        }
-        try xcCommand(commands, frameworkName)
-    }
-    
-    func transferLibrary() throws {
-        let libPath = ask("Please enter .a file path")
-        let headerDir = ask("Please enter the folder where the header files are located")
-        guard let libName = libraryName(libPath, ".a")?.replacingOccurrences(of: "lib", with: "") else {
-            throw XCError.error("Cannot find library name")
-        }
-        /// 二进制的路径
-        let libExec = libPath
-        let archPlaforms = parseLibraryArchs(libExec)
-        var commands:[String] = []
-        let buildDir = try self.buildDir()
-        let cacheHeaderDir = "\(buildDir)/headers"
-        try FileManager.default.copyItem(atPath: headerDir, toPath: cacheHeaderDir)
-        try deleteOtherFile(cacheHeaderDir)
-        for archs in archPlaforms {
-            let command = try spliteArchLib(archs, "lib\(libName).a", rootPath(libPath), buildDir)
-            commands.append(contentsOf: ["-library", command, "-headers", cacheHeaderDir])
-        }
-        try xcCommand(commands, libName)
-    }
-    
-    func deleteOtherFile(_ dir:String) throws {
-        let contents = try FileManager.default.contentsOfDirectory(atPath: dir)
-        for file in contents {
-            let path = "\(dir)/\(file)"
-            var isDir = ObjCBool(false)
-            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir) else {
-                continue
-            }
-            if isDir.boolValue {
-                try deleteOtherFile(path)
-            } else {
-                guard !file.contains(".h") else {
-                    continue
-                }
-                try FileManager.default.removeItem(atPath: path)
-            }
-        }
-    }
     
     func xcCommand(_ cammands:[String], _ libbraryName:String) throws {
         let buildDir = try self.buildDir()
@@ -171,5 +97,154 @@ class XCBuild {
         var paths = path.components(separatedBy: "/")
         paths.removeLast()
         return paths.joined(separator: "/")
+    }
+}
+
+
+extension XCBuild {
+    func transfer() throws {
+        let chooseType = choose("Please select the type of conversion", choices: "framework", "library")
+        if chooseType == "framework" {
+            try transferFramework()
+        } else if chooseType == "library" {
+            try transferLibrary()
+        } else {
+            throw XCError.error("\(chooseType) type is not currently supported")
+        }
+    }
+    
+    func transferFramework() throws {
+        let frameworkDir = ask("Please enter the path where the .framework is located")
+        guard let frameworkName = libraryName(frameworkDir, ".framework") else {
+            throw XCError.error("Cannot find framework name")
+        }
+        /// 二进制的路径
+        let frameworkExec = "\(frameworkDir)/\(frameworkName)"
+        let archPlaforms = parseLibraryArchs(frameworkExec)
+        var commands:[String] = []
+        let buildDir = try self.buildDir()
+        for archs in archPlaforms {
+            let arcName = archs.joined(separator: "-")
+            let command = try spliteArchLib(archs, frameworkName, frameworkDir, buildDir)
+            let toFrameworkPath = "\(buildDir)/\(arcName)/\(frameworkName).framework"
+            try FileManager.default.copyItem(atPath: frameworkDir, toPath: toFrameworkPath)
+            let realPath = try FileManager.default.destinationOfSymbolicLink(atPath: "\(toFrameworkPath)/\(frameworkName)")
+            let fromURL = URL(fileURLWithPath: "\(toFrameworkPath)/\(realPath)")
+            let toURL = URL(fileURLWithPath: command)
+            let _ = try FileManager.default.replaceItemAt(fromURL, withItemAt: toURL)
+            commands.append(contentsOf: ["-framework", toFrameworkPath])
+        }
+        try xcCommand(commands, frameworkName)
+    }
+    
+    func transferLibrary() throws {
+        let libPath = ask("Please enter .a file path")
+        let headerDir = ask("Please enter the folder where the header files are located")
+        guard let libName = libraryName(libPath, ".a")?.replacingOccurrences(of: "lib", with: "") else {
+            throw XCError.error("Cannot find library name")
+        }
+        /// 二进制的路径
+        let libExec = libPath
+        let archPlaforms = parseLibraryArchs(libExec)
+        var commands:[String] = []
+        let buildDir = try self.buildDir()
+        let cacheHeaderDir = "\(buildDir)/headers"
+        try FileManager.default.copyItem(atPath: headerDir, toPath: cacheHeaderDir)
+        try deleteOtherFile(cacheHeaderDir)
+        for archs in archPlaforms {
+            let command = try spliteArchLib(archs, "lib\(libName).a", rootPath(libPath), buildDir)
+            commands.append(contentsOf: ["-library", command, "-headers", cacheHeaderDir])
+        }
+        try xcCommand(commands, libName)
+    }
+    
+    func deleteOtherFile(_ dir:String) throws {
+        let contents = try FileManager.default.contentsOfDirectory(atPath: dir)
+        for file in contents {
+            let path = "\(dir)/\(file)"
+            var isDir = ObjCBool(false)
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir) else {
+                continue
+            }
+            if isDir.boolValue {
+                try deleteOtherFile(path)
+            } else {
+                guard !file.contains(".h") else {
+                    continue
+                }
+                try FileManager.default.removeItem(atPath: path)
+            }
+        }
+    }
+}
+
+extension XCBuild {
+    func build(platforms:[String]) throws {
+        let xcodeprojPath = ask("Please enter the .xcodeproj file path")
+        let buildList = BuildList(xcodeprojPath)
+        let scheme:String
+        guard buildList.schemes.count > 0 else {
+            throw XCError.error("No Scheme exists")
+        }
+        if buildList.schemes.count == 1 {
+            scheme = buildList.schemes[0]
+        } else {
+            scheme = choose("Please select the corresponding Scheme", type: String.self, costumizationBlock: { (setting) in
+                for scheme in buildList.schemes {
+                    setting.addChoice(scheme) { () -> String in
+                        return scheme
+                    }
+                }
+            })
+        }
+        var buildSettings = BuildSetting(project: xcodeprojPath, scheme: scheme)
+        buildSettings.parse()
+        
+        let productName = buildSettings.settings["PRODUCT_NAME"] ?? scheme
+        let destinations:[String:[(String,String)]] = [
+            "iOS" : [
+                ("iOS","iphoneos"),
+                ("iOS Simulator","iphonesimulator")
+            ],
+            "macOS" : [
+                ("macOS","macosx"),
+            ],
+            "tvOS" : [
+                ("tvOS","appletvos"),
+                ("tvOS Simulator","appletvsimulator")
+            ],
+            "watchOS" : [
+                ("watchOS","watchos"),
+                ("watchOS Simulator","watchsimulator")
+            ]
+        ]
+        var xcCommands:[String] = []
+        for platform in platforms {
+            guard let items = destinations[platform] else {
+                continue
+            }
+            for item in items {
+                let commands = try xcodeBuild(xcodeprojPath: xcodeprojPath, scheme: scheme, sdk: item.1, configurations: "Release", productName: productName)
+                xcCommands.append(contentsOf: commands)
+            }
+        }
+        try xcCommand(xcCommands, productName)
+    }
+    
+    func xcodeBuild(xcodeprojPath:String, scheme:String, sdk:String, configurations:String, productName:String) throws -> [String] {
+        let buildDir = try self.buildDir()
+        let buildLibraryDir = "\(buildDir)/\(configurations)-\(sdk)"
+        try runAndPrint("xcodebuild", "-project", xcodeprojPath, "-scheme", scheme, "-configuration", configurations, "-sdk", sdk, "SKIP_INSTALL=NO", "BUILD_LIBRARIES_FOR_DISTRIBUTION=YES", "CONFIGURATION_BUILD_DIR=\(buildLibraryDir)", "-verbose")
+        var isFramework = false
+        for item in try FileManager.default.contentsOfDirectory(atPath: buildLibraryDir) {
+            if item.contains(".framework") {
+                isFramework = true
+            }
+        }
+        if isFramework {
+            return ["-framework", "\(buildLibraryDir)/\(productName).framework"]
+        } else {
+            return ["-library", "\(buildLibraryDir)/lib\(productName).a", "-headers", "\(buildLibraryDir)/include/\(productName)"]
+        }
     }
 }
