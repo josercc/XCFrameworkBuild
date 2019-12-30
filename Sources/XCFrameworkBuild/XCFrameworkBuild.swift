@@ -11,100 +11,81 @@ import SwiftShell
 
 struct XCFrameworkBuild {
     let project:String
-    let exportPath:String
     let scheme:String
+    let supportPlaforms:[String]
+    let productName:String
+    let productPath:String
     let configurations:String
-    let destination:[String]
-    var productName:String = ""
     var frameworkPaths:[String] = []
     
     mutating func build() throws {
-        var scheme = self.scheme
-        var configurations = self.configurations
-        print("→ 正在获取工程配置信息")
-        // xcodebuild -project project -list
-        let output = run("xcodebuild", "-project", project, "-list").stdout
-        let outputList = output.components(separatedBy: "\n\n")
-        for item in outputList {
-            let _item = item.replacingOccurrences(of: " ", with: "")
-            let itemList = _item.components(separatedBy: "\n")
-            if item.contains("Build Configurations") && configurations.count == 0 {
-                print("→ 正在查询当前配置")
-                if itemList.contains("Release") {
-                    configurations = "Release"
-                } else {
-                    configurations = readLine(description: "读取不到默认配置Release请手动选择", content: itemList)
-                }
-                print("→ 读取配置[\(configurations)]")
-            } else if item.contains("Schemes") && scheme.count == 0 {
-                if itemList.count == 2 {
-                    scheme = itemList[1]
-                } else {
-                    scheme = readLine(description: "请选择对应的Scheme", content: itemList, ignoreIndex: 0)
-                }
-                print("→ 读取scheme[\(scheme)]")
+        let destinations:[String:[(String,String)]] = [
+            "iOS" : [
+                ("iOS","iphoneos"),
+                ("iOS Simulator","iphonesimulator")
+            ],
+            "macOS" : [
+                ("macOS","macosx"),
+            ],
+            "tvOS" : [
+                ("tvOS","appletvos"),
+                ("tvOS Simulator","appletvsimulator")
+            ],
+            "watchOS" : [
+                ("watchOS","watchos"),
+                ("watchOS Simulator","watchsimulator")
+            ]
+        ]
+        for plaform in self.supportPlaforms {
+            guard let destination = destinations[plaform] else {
+                continue
+            }
+            for d in destination {
+                try xcodeBuild(scheme: scheme, destination: d, configurations: configurations)
             }
         }
-        for destination in self.destination {
-            try xcodeBuild(scheme: scheme, destination: destination, configurations: configurations)
-        }
         var createXCFrameworks:[String] = ["-create-xcframework"]
-        for item in self.frameworkPaths {
-            createXCFrameworks.append("-framework")
-            createXCFrameworks.append(item)
-        }
+        createXCFrameworks.append(contentsOf: self.frameworkPaths)
         createXCFrameworks.append("-output")
-        createXCFrameworks.append("\(self.exportPath)/\(self.currenntSetProductName()).xcframework")
-        // xcodebuild -create-xcframework -framework /tmp/xcf/ios.xcarchive/Products/Library/Frameworks/TestFramework.framework -framework /tmp/xcf/iossimulator.xcarchive/Products/Library/Frameworks/TestFramework.framework -output /tmp/xcf/TestFramework.xcframework
+        let xcframeworkPath = "\(self.productPath)/\(self.productName).xcframework"
+        if FileManager.default.fileExists(atPath: xcframeworkPath) {
+            try runAndPrint("rm", "-r", xcframeworkPath)
+        }
+        createXCFrameworks.append(xcframeworkPath)
         try runAndPrint("xcodebuild", createXCFrameworks)
+        try runAndPrint("open", self.productPath)
     }
     
-    mutating func xcodeBuild(scheme:String, destination:String, configurations:String) throws {
-        let sdkMap:[String:String] = [
-            "iOS" : "iphoneos",
+    mutating func xcodeBuild(scheme:String, destination:(String,String), configurations:String) throws {
+        let libraryPath = "\(self.productPath)/\(destination.1).xcarchive"
+        try runAndPrint("xcodebuild", "-project", project, "archive", "-scheme", scheme, "-configuration", configurations, "-destination=\"\(destination.0)\"", "-archivePath", libraryPath, "-sdk", destination.1, "SKIP_INSTALL=NO", "BUILD_LIBRARIES_FOR_DISTRIBUTION=YES", "-verbose")
+        
+        let frameworkPath = "\(libraryPath)/Products/Library/Frameworks/\(self.productName).framework"
+        let libLibraryPath = "\(libraryPath)/Products/usr/local/lib/lib\(self.productName).a"
+        let rootPath = self.productPath.replacingOccurrences(of: "Products", with: "Intermediates.noindex")
+        let headerMap:[String:String] = [
+            "iOS" : "iphonesimulator",
             "iOS Simulator" : "iphonesimulator",
             "macOS" : "macosx",
-            "tvOS" : "appletvos",
+            "tvOS" : "appletvsimulator",
             "tvOS Simulator" : "appletvsimulator",
-            "watchOS" : "watchos",
+            "watchOS" : "watchsimulator",
             "watchOS Simulator" : "watchsimulator",
         ]
-        let sdk = sdkMap[destination] ?? "iphoneos"
-        let archivePath = "\(self.exportPath)/\(sdk).xcarchive"
-        //         // xcodebuild archive -scheme TestFramework -destination="iOS" -archivePath /tmp/xcf/ios.xcarchive -derivedDataPath /tmp/iphoneos -sdk iphoneos SKIP_INSTALL=NO BUILD_LIBRARIES_FOR_DISTRIBUTION=YES
-        try runAndPrint("xcodebuild", "-project", project, "archive", "-scheme", scheme, "-configuration", configurations, "-destination=\"\(destination)\"", "-archivePath", archivePath, "-sdk", sdk, "SKIP_INSTALL=NO", "BUILD_LIBRARIES_FOR_DISTRIBUTION=YES", "-verbose")
-        let frameworkPath = "\(archivePath)/Products/Library/Frameworks/\(self.currenntSetProductName()).framework"
-        self.frameworkPaths.append(frameworkPath)
-        if !destination.contains("macOS") && !destination.contains("Simulator") {
-            try xcodeBuild(scheme: scheme, destination: "\(destination) Simulator", configurations: configurations)
+        guard let headerValue = headerMap[destination.0] else {
+            return
         }
-    }
-    
-    func readLine(description:String, content:[String], ignoreIndex:Int = 0) -> String {
-        var output = description
-        var content = content
-        content.remove(at: ignoreIndex)
-        for elenment in content.enumerated() {
-            output += "\n\(elenment.offset) \(elenment.element)"
-        }
-        print(output)
-        guard let index =  Int(Swift.readLine() ?? "") else {
-            print("🔴 输入序列号错误 重新输入")
-            return readLine(description: description, content: content, ignoreIndex: ignoreIndex)
-        }
-        guard index < content.count else {
-            print("🔴 输入序列号错误 重新输入")
-            return readLine(description: description, content: content, ignoreIndex: ignoreIndex)
-        }
-        return content[index]
-    }
-    
-    func currenntSetProductName() -> String {
-        if self.productName.count > 0 {
-            return self.productName
+        let headerPath = "\(rootPath)/ArchiveIntermediates/MyLibrary/BuildProductsPath/\(self.configurations)-\(headerValue)/include"
+        if FileManager.default.fileExists(atPath: frameworkPath) {
+            self.frameworkPaths.append("-framework")
+            self.frameworkPaths.append(frameworkPath)
         } else {
-            return self.scheme
+            self.frameworkPaths.append("-library")
+            self.frameworkPaths.append(libLibraryPath)
+            self.frameworkPaths.append("-headers")
+            self.frameworkPaths.append(headerPath)
         }
     }
+    
 }
 

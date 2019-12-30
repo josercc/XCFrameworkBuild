@@ -20,6 +20,15 @@
         }
       },
       {
+        "package": "Swiftline",
+        "repositoryURL": "https://github.com/JoserccCLI/Swiftline",
+        "state": {
+          "branch": null,
+          "revision": "6812a31e89d0cdaf7e0358c4755dd3ec716fe9b9",
+          "version": "0.6.0"
+        }
+      },
+      {
         "package": "SwiftShell",
         "repositoryURL": "https://github.com/kareman/SwiftShell",
         "state": {
