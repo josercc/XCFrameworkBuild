@@ -30,7 +30,7 @@ class XCBuild {
     }
     
     func transferFramework() throws {
-        let frameworkDir = ask("Please enter the path where the .framework is located\n")
+        let frameworkDir = ask("Please enter the path where the .framework is located")
         guard let frameworkName = libraryName(frameworkDir, ".framework") else {
             throw XCError.error("Cannot find framework name")
         }
@@ -54,8 +54,8 @@ class XCBuild {
     }
     
     func transferLibrary() throws {
-        let libPath = ask("Please enter .a file path\n")
-        let headerDir = ask("Please enter the folder where the header files are located\n")
+        let libPath = ask("Please enter .a file path")
+        let headerDir = ask("Please enter the folder where the header files are located")
         guard let libName = libraryName(libPath, ".a")?.replacingOccurrences(of: "lib", with: "") else {
             throw XCError.error("Cannot find library name")
         }
@@ -64,11 +64,33 @@ class XCBuild {
         let archPlaforms = parseLibraryArchs(libExec)
         var commands:[String] = []
         let buildDir = try self.buildDir()
+        let cacheHeaderDir = "\(buildDir)/headers"
+        try FileManager.default.copyItem(atPath: headerDir, toPath: cacheHeaderDir)
+        try deleteOtherFile(cacheHeaderDir)
         for archs in archPlaforms {
             let command = try spliteArchLib(archs, "lib\(libName).a", rootPath(libPath), buildDir)
-            commands.append(contentsOf: ["-library", command, "-headers", headerDir])
+            commands.append(contentsOf: ["-library", command, "-headers", cacheHeaderDir])
         }
         try xcCommand(commands, libName)
+    }
+    
+    func deleteOtherFile(_ dir:String) throws {
+        let contents = try FileManager.default.contentsOfDirectory(atPath: dir)
+        for file in contents {
+            let path = "\(dir)/\(file)"
+            var isDir = ObjCBool(false)
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir) else {
+                continue
+            }
+            if isDir.boolValue {
+                try deleteOtherFile(path)
+            } else {
+                guard !file.contains(".h") else {
+                    continue
+                }
+                try FileManager.default.removeItem(atPath: path)
+            }
+        }
     }
     
     func xcCommand(_ cammands:[String], _ libbraryName:String) throws {
