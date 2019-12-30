@@ -30,7 +30,7 @@ class XCBuild {
     }
     
     func transferFramework() throws {
-        let frameworkDir = ask("Please enter the path where the .framework is located")
+        let frameworkDir = ask("Please enter the path where the .framework is located\n")
         guard let frameworkName = libraryName(frameworkDir, ".framework") else {
             throw XCError.error("Cannot find framework name")
         }
@@ -44,16 +44,18 @@ class XCBuild {
             let command = try spliteArchLib(archs, frameworkName, frameworkDir, buildDir)
             let toFrameworkPath = "\(buildDir)/\(arcName)/\(frameworkName).framework"
             try FileManager.default.copyItem(atPath: frameworkDir, toPath: toFrameworkPath)
-            try FileManager.default.removeItem(atPath: "\(toFrameworkPath)/\(frameworkName)")
-            try FileManager.default.copyItem(atPath: command, toPath: "\(toFrameworkPath)/\(frameworkName)")
+            let realPath = try FileManager.default.destinationOfSymbolicLink(atPath: "\(toFrameworkPath)/\(frameworkName)")
+            let fromURL = URL(fileURLWithPath: "\(toFrameworkPath)/\(realPath)")
+            let toURL = URL(fileURLWithPath: command)
+            let _ = try FileManager.default.replaceItemAt(fromURL, withItemAt: toURL)
             commands.append(contentsOf: ["-framework", toFrameworkPath])
         }
         try xcCommand(commands, frameworkName)
     }
     
     func transferLibrary() throws {
-        let libPath = ask("Please enter .a file path")
-        let headerDir = ask("Please enter the folder where the header files are located")
+        let libPath = ask("Please enter .a file path\n")
+        let headerDir = ask("Please enter the folder where the header files are located\n")
         guard let libName = libraryName(libPath, ".a")?.replacingOccurrences(of: "lib", with: "") else {
             throw XCError.error("Cannot find library name")
         }
