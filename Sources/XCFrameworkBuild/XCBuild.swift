@@ -128,8 +128,14 @@ extension XCBuild {
             let command = try spliteArchLib(archs, frameworkName, frameworkDir, buildDir)
             let toFrameworkPath = "\(buildDir)/\(arcName)/\(frameworkName).framework"
             try FileManager.default.copyItem(atPath: frameworkDir, toPath: toFrameworkPath)
-            let realPath = try FileManager.default.destinationOfSymbolicLink(atPath: "\(toFrameworkPath)/\(frameworkName)")
-            let fromURL = URL(fileURLWithPath: "\(toFrameworkPath)/\(realPath)")
+            let frameworkPath = "\(toFrameworkPath)/\(frameworkName)"
+            let realPath:String
+            if let symbolicLink = try? FileManager.default.destinationOfSymbolicLink(atPath: "\(toFrameworkPath)/\(frameworkName)") {
+                realPath = symbolicLink
+            } else {
+                realPath = frameworkPath
+            }
+            let fromURL = URL(fileURLWithPath: "\(realPath)")
             let toURL = URL(fileURLWithPath: command)
             let _ = try FileManager.default.replaceItemAt(fromURL, withItemAt: toURL)
             commands.append(contentsOf: ["-framework", toFrameworkPath])
