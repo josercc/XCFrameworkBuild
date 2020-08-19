@@ -4,6 +4,8 @@
 
 A script program that helps you build `XCFramework` quickly, and supports conversion of` .framework` and `.a` before` .xcframework`.
 
+⚠️ All the paths used are the absolute paths of the computer
+
 ## Install
 
 ### Install Mint（If not already installed）
