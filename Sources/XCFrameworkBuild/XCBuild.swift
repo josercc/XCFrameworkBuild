@@ -131,7 +131,7 @@ extension XCBuild {
             let frameworkPath = "\(toFrameworkPath)/\(frameworkName)"
             let realPath:String
             if let symbolicLink = try? FileManager.default.destinationOfSymbolicLink(atPath: "\(toFrameworkPath)/\(frameworkName)") {
-                realPath = symbolicLink
+                realPath = "\(toFrameworkPath)/\(symbolicLink)"
             } else {
                 realPath = frameworkPath
             }
