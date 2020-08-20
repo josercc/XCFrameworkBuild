@@ -20,7 +20,9 @@ struct BuildSetting {
                 continue
             }
             let configurations = content.element.components(separatedBy: " = ")
-            self.settings[configurations[0]] = configurations[1]
+            if configurations.count == 2 {
+                self.settings[configurations[0]] = configurations[1]
+            }
         }
     }
 }
