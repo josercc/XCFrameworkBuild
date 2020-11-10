@@ -1,0 +1,4 @@
+module CwlCatchExceptionSupport {
+    umbrella "/Users/zhangxing/Downloads/update/Swiftline/.build/checkouts/CwlCatchException/Sources/CwlCatchExceptionSupport/include"
+    export *
+}

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+# Create a Swift Package Manager executable project structure and an Xcode project.
+
+# exit at the first sign of trouble.
+set -e
+
+NAME=$1
+
+mkdir $NAME
+cd $NAME
+
+swift package init --type executable
+
+cat > Package.swift <<_EOF_
+// swift-tools-version:5.0
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+import PackageDescription
+
+let package = Package(
+    name: "$NAME",
+    platforms: [
+        .macOS(.v10_13),
+	],
+    dependencies: [
+        // Dependencies declare other packages that this package depends on.
+        .package(url: "https://github.com/kareman/SwiftShell", from: "5.0.0")
+    ],
+    targets: [
+        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
+        // Targets can depend on other targets in this package, and on products in packages which this package depends on.
+        .target(
+            name: "$NAME",
+            dependencies: ["SwiftShell"]),
+    ]
+)
+
+_EOF_
+
+swift build
+
+# Uncomment to automatically place a symbolic link to the compiled executable in a folder in your $PATH. 
+#ln -s `pwd`/.build/debug/$NAME <A FOLDER IN YOUR $PATH>/$NAME
+
+platform=$(uname)
+
+if [[ "$platform" == 'Darwin' ]]; then
+	swift package generate-xcodeproj
+	open $NAME.xcodeproj/
+fi
